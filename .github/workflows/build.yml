@@ -1,0 +1,38 @@
+name: Build and Release MiceWine RootFS
+
+on:
+  push:
+    branches: "*"
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: "Checkout Repository"
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: "Download All Optional Packages and DXVK/WineD3D/VKD3D"
+      run: |
+        ./download-external-dependencies.sh
+        ./download-optional-packages.sh
+        ./create-repository-index.sh
+
+    - name: "Create Release"
+      uses: softprops/action-gh-release@v2
+      with:
+        name: "MiceWine Repository"
+        tag_name: default
+        prerelease: true
+        files: |
+          index.json
+          components/DXVK/*
+          components/WineD3D/*
+          components/VKD3D/*
+          components/Packages/*
+
