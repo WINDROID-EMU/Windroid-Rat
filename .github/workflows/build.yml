@@ -28,7 +28,7 @@ jobs:
       with:
         name: "MiceWine Repository"
         tag_name: default
-        prerelease: true
+        prerelease: false
         files: |
           index.json
           components/DXVK/*
