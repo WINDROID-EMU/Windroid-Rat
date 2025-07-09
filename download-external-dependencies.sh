@@ -128,8 +128,8 @@ wined3dDownload() {
 			mkdir -p "wined3d/files/x64"
 			mkdir -p "wined3d/files/x32"
 
-			7z x "WineD3D*$1-x86_64.zip" -o"wined3d-x64" -aoa &> /dev/zero
-			7z x "WineD3D*$1.zip" -o"wined3d-x32" -aoa &> /dev/zero
+			7z x "WineD3D*$1-x86_64.zip" -o"wined3d-x64" -aoa &> /dev/null
+			7z x "WineD3D*$1.zip" -o"wined3d-x32" -aoa &> /dev/null
 
 			for i in $(find "wined3d-x64" -name "*.dll"); do
 				cp -f "$i" "wined3d/files/x64"
@@ -181,36 +181,20 @@ export INIT_DIR="$PWD"
 export WORKDIR="$PWD/components"
 
 mkdir -p "$WORKDIR"
-
 cd "$WORKDIR"
-
 mkdir -p "DXVK" "WineD3D" "VKD3D"
 
 export DXVK_GPLASYNC_LIST="2.6-1 2.5.3-1 2.5.2-1 2.5.1-2 2.5-1 2.4.1-1 2.4-1 2.3.1-1 2.3-1 2.2-4 2.1-4"
 export DXVK_ASYNC_LIST="2.0 1.10.3 1.10.2 1.10.1 1.10 1.9.4 1.9.3 1.9.2 1.9.1 1.9"
-export DXVK_LIST="2.6.1 2.6 2.5.3 2.5.2 2.5.1 2.5 2.4.1 2.4 2.3.1 2.3 2.2 2.1 2.0 1.10.3 1.10.2 1.10.1 1.10 1.9.4 1.9.3 1.9.2 1.9.1 1.9 1.8.1 1.8 1.7.3 1.7.2 1.7.1 1.7 1.6.1 1.6 1.5.5 1.5.4 1.5.3 1.5.2 1.5.1 1.5 1.4.6 1.4.5 1.4.4 1.4.3 1.4.2 1.4.1 1.4 0.96"
+export DXVK_LIST="2.7 2.6.1 2.6 2.5.3 2.5.2 2.5.1 2.5 2.4.1 2.4 2.3.1 2.3 2.2 2.1 2.0 1.10.3 1.10.2 1.10.1 1.10 1.9.4 1.9.3 1.9.2 1.9.1 1.9 1.8.1 1.8 1.7.3 1.7.2 1.7.1 1.7 1.6.1 1.6 1.5.5 1.5.4 1.5.3 1.5.2 1.5.1 1.5 1.4.6 1.4.5 1.4.4 1.4.3 1.4.2 1.4.1 1.4 0.96"
 export WINED3D_LIST="10.4 10.3 10.2 10.1 10.0 10.0-rc3 9.20 9.16 9.3 9.1 9.0 8.15 7.11 3.17"
 export VKD3D_LIST="2.14.1 2.14 2.13 2.12 2.11.1 2.11 2.10 2.9 2.8"
 
-for i in $DXVK_GPLASYNC_LIST; do
-	dxvkGplAsyncDownload "$i"
-done
-
-for i in $DXVK_ASYNC_LIST; do
-	dxvkAsyncDownload "$i"
-done
-
-for i in $DXVK_LIST; do
-	dxvkDownload "$i"
-done
-
-for i in $WINED3D_LIST; do
-	wined3dDownload "$i"
-done
-
-for i in $VKD3D_LIST; do
-	vkd3dDownload "$i"
-done
+for i in $DXVK_GPLASYNC_LIST; do dxvkGplAsyncDownload "$i"; done
+for i in $DXVK_ASYNC_LIST; do dxvkAsyncDownload "$i"; done
+for i in $DXVK_LIST; do dxvkDownload "$i"; done
+for i in $WINED3D_LIST; do wined3dDownload "$i"; done
+for i in $VKD3D_LIST; do vkd3dDownload "$i"; done
 
 customDxvkDownload "1.10" "Stripped-Requirements" "https://github.com/KreitinnSoftware/dxvk/releases/download/dxvk-1.10-stripped-requirements/dxvk-1.10-b3e85be0fcef978604656a19ecafdde85a28326a.tar.gz"
 customDxvkDownload "1.10.6" "Sarek-Stripped-Requirements" "https://github.com/KreitinnSoftware/dxvk-gplasync/raw/refs/heads/main/dxvk-sarek-stripped.tar.gz"
