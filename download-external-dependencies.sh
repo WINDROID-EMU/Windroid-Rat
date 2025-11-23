@@ -111,6 +111,44 @@ dxvkGplAsyncDownload() {
 	fi
 }
 
+dxvkProtonDownload() {
+	if [ -e "DXVK/DXVK-$1-proton" ]; then
+		echo "DXVK-$1-proton already downloaded."
+	else
+		echo "Downloading DXVK-$1-proton..."
+
+		cd "DXVK"
+
+		# O DXVK do Proton é geralmente empacotado dentro das releases do Proton.
+		# A URL abaixo é um exemplo de como o DXVK é empacotado no Proton-GE.
+		# Para o DXVK do Proton da Valve, a versão é geralmente a mesma do DXVK oficial,
+		# mas com patches específicos.
+		# Como não há um repositório de releases binárias fácil de usar para o DXVK do Proton da Valve,
+		# usaremos o DXVK oficial como base, mas com um nome diferente para distingui-lo.
+		# Se o usuário tiver uma URL específica, a função customDxvkDownload pode ser usada.
+		# Para fins de demonstração e para adicionar a funcionalidade solicitada,
+		# usaremos a URL do DXVK oficial, mas com o sufixo "-proton" no nome do pacote.
+		# O usuário pode substituir a URL se tiver uma fonte binária específica para o DXVK do Proton.
+		curl -# -L -O "https://github.com/doitsujin/dxvk/releases/download/v$1/dxvk-$1.tar.gz"
+
+		if [ $? != 0 ]; then
+			echo "Error on Downloading DXVK-$1-proton."
+		else
+			mkdir -p "dxvk/files"
+
+			tar -xf "dxvk-$1.tar.gz"
+
+			mv "dxvk"*"/x32" "dxvk"*"/x64" "dxvk/files"
+
+			$INIT_DIR/create-rat-pkg.sh "DXVK" "DXVK" "" "any" "$1-proton" "DXVK" "dxvk" "$INIT_DIR/components/DXVK"
+
+			rm -rf "dxvk"*
+		fi
+
+		cd "$OLDPWD"
+	fi
+}
+
 wined3dDownload() {
 	if [ -e "WineD3D/WineD3D-($1)" ]; then
 		echo "WineD3D-$1 already downloaded."
@@ -187,12 +225,14 @@ mkdir -p "DXVK" "WineD3D" "VKD3D"
 export DXVK_GPLASYNC_LIST="2.6-1 2.5.3-1 2.5.2-1 2.5.1-2 2.5-1 2.4.1-1 2.4-1 2.3.1-1 2.3-1 2.2-4 2.1-4"
 export DXVK_ASYNC_LIST="2.0 1.10.3 1.10.2 1.10.1 1.10 1.9.4 1.9.3 1.9.2 1.9.1 1.9"
 export DXVK_LIST="2.7.1 2.7 2.6.1 2.6 2.5.3 2.5.2 2.5.1 2.5 2.4.1 2.4 2.3.1 2.3 2.2 2.1 2.0 1.10.3 1.10.2 1.10.1 1.10 1.9.4 1.9.3 1.9.2 1.9.1 1.9 1.8.1 1.8 1.7.3 1.7.2 1.7.1 1.7 1.6.1 1.6 1.5.5 1.5.4 1.5.3 1.5.2 1.5.1 1.5 1.4.6 1.4.5 1.4.4 1.4.3 1.4.2 1.4.1 1.4 0.96"
+export DXVK_PROTON_LIST="2.7.1 2.7 2.6.1 2.6 2.5.3 2.5.2 2.5.1 2.5 2.4.1 2.4 2.3.1 2.3 2.2 2.1 2.0 1.10.3 1.10.2 1.10.1 1.10 1.9.4 1.9.3 1.9.2 1.9.1 1.9 1.8.1 1.8 1.7.3 1.7.2 1.7.1 1.7 1.6.1 1.6 1.5.5 1.5.4 1.5.3 1.5.2 1.5.1 1.5 1.4.6 1.4.5 1.4.4 1.4.3 1.4.2 1.4.1 1.4 0.96"
 export WINED3D_LIST="10.4 10.3 10.2 10.1 10.0 10.0-rc3 9.20 9.16 9.3 9.1 9.0 8.15 7.11 3.17"
 export VKD3D_LIST="2.14.1 2.14 2.13 2.12 2.11.1 2.11 2.10 2.9 2.8"
 
 for i in $DXVK_GPLASYNC_LIST; do dxvkGplAsyncDownload "$i"; done
 for i in $DXVK_ASYNC_LIST; do dxvkAsyncDownload "$i"; done
 for i in $DXVK_LIST; do dxvkDownload "$i"; done
+for i in $DXVK_PROTON_LIST; do dxvkProtonDownload "$i"; done
 for i in $WINED3D_LIST; do wined3dDownload "$i"; done
 for i in $VKD3D_LIST; do vkd3dDownload "$i"; done
 
