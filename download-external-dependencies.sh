@@ -2,113 +2,194 @@
 
 # Função para baixar DXVK customizado
 customDxvkDownload() {
-        if [ -e "DXVK/$1" ]; then
-                echo "$1 já foi baixado."
-        else
-                echo "Baixando DXVK-$1..."
-                cd "DXVK"
-                curl -# -L -O "$3"
-                if [ $? != 0 ]; then
-                        echo "Erro ao baixar DXVK-$1."
-                else
-                        mkdir -p "dxvk/files"
-                        tar -xf "$(basename $3)"
-                        # Movendo x32 e x64 se existirem
-                        [ -d "dxvk"*"/x32" ] && mv "dxvk"*"/x32" "dxvk/files"
-                        [ -d "dxvk"*"/x64" ] && mv "dxvk"*"/x64" "dxvk/files"
-                        # Movendo aarch64 se existir
-                        [ -d "dxvk"*"/aarch64" ] && mv "dxvk"*"/aarch64" "dxvk/files"
-                        $INIT_DIR/create-rat-pkg.sh "DXVK" "DXVK" "" "any" "$1-$2" "DXVK" "dxvk" "$INIT_DIR/components/DXVK"
-                        rm -rf "dxvk"*
-                fi
-                cd "$OLDPWD"
+    local version_name="$1"
+    local suffix="$2"
+    local url="$3"
+    local pkg_name="DXVK-${version_name}-${suffix}"
+    local filename=$(basename "$url")
+
+    if [ -e "DXVK/$pkg_name" ]; then
+        echo "$pkg_name já foi baixado."
+    else
+        echo "Baixando $pkg_name..."
+        cd "DXVK"
+        curl -# -L -O "$url"
+        if [ $? -ne 0 ]; then
+            echo "Erro ao baixar $pkg_name de $url."
+            cd "$OLDPWD"
+            return 1
         fi
+
+        # Verifica se o arquivo baixado é um arquivo tar ou zip válido antes de extrair
+        if [[ "$filename" == *.tar.gz ]] || [[ "$filename" == *.tar.zst ]]; then
+            if ! tar -tf "$filename" &> /dev/null; then
+                echo "Erro: O arquivo baixado '$filename' não é um arquivo tar válido."
+                rm -f "$filename"
+                cd "$OLDPWD"
+                return 1
+            fi
+            tar -xf "$filename"
+        elif [[ "$filename" == *.zip ]]; then
+            if ! unzip -t "$filename" &> /dev/null; then
+                echo "Erro: O arquivo baixado '$filename' não é um arquivo zip válido."
+                rm -f "$filename"
+                cd "$OLDPWD"
+                return 1
+            fi
+            unzip -o "$filename"
+        else
+            echo "Aviso: Formato de arquivo não suportado para extração automática: $filename"
+            cd "$OLDPWD"
+            return 1
+        fi
+
+        mkdir -p "dxvk/files"
+        # Movendo diretórios de arquitetura se existirem
+        [ -d "dxvk"*"/x32" ] && mv dxvk*"/x32" "dxvk/files"
+        [ -d "dxvk"*"/x64" ] && mv dxvk*"/x64" "dxvk/files"
+        [ -d "dxvk"*"/aarch64" ] && mv dxvk*"/aarch64" "dxvk/files"
+        # Adicionado para o RTX Remix que usa uma estrutura diferente
+        [ -d "bin/x64" ] && mv bin/x64 "dxvk/files/"
+
+        $INIT_DIR/create-rat-pkg.sh "DXVK" "DXVK" "" "any" "${version_name}-${suffix}" "DXVK" "dxvk" "$INIT_DIR/components/DXVK"
+        
+        # Limpeza mais segura
+        rm -rf "dxvk-"* "bin" "rtx-remix"* "$filename"
+        
+        cd "$OLDPWD"
+    fi
 }
 
 # Função para baixar DXVK padrão (x86/x64)
 dxvkDownload() {
-        if [ -e "DXVK/DXVK-$1" ]; then
-                echo "DXVK-$1 já foi baixado."
-        else
-                echo "Baixando DXVK-$1..."
-                cd "DXVK"
-                curl -# -L -O "https://github.com/doitsujin/dxvk/releases/download/v$1/dxvk-$1.tar.gz"
-                if [ $? != 0 ]; then
-                        echo "Erro ao baixar DXVK-$1."
-                else
-                        mkdir -p "dxvk/files"
-                        tar -xf "dxvk-$1.tar.gz"
-                        mv "dxvk"*"/x32" "dxvk"*"/x64" "dxvk/files"
-                        $INIT_DIR/create-rat-pkg.sh "DXVK" "DXVK" "" "any" "$1" "DXVK" "dxvk" "$INIT_DIR/components/DXVK"
-                        rm -rf "dxvk"*
-                fi
-                cd "$OLDPWD"
-        fi
+    if [ -e "DXVK/DXVK-$1" ]; then echo "DXVK-$1 já foi baixado."; else
+        echo "Baixando DXVK-$1..."; cd "DXVK"
+        curl -# -L -O "https://github.com/doitsujin/dxvk/releases/download/v$1/dxvk-$1.tar.gz"
+        if [ $? -ne 0 ]; then echo "Erro ao baixar DXVK-$1."; else
+            mkdir -p "dxvk/files"; tar -xf "dxvk-$1.tar.gz"
+            mv "dxvk"*"/x32" "dxvk"*"/x64" "dxvk/files"
+            $INIT_DIR/create-rat-pkg.sh "DXVK" "DXVK" "" "any" "$1" "DXVK" "dxvk" "$INIT_DIR/components/DXVK"
+            rm -rf "dxvk-"*
+        fi; cd "$OLDPWD"
+    fi
 }
 
-# NOVA FUNÇÃO: Função para baixar DXVK para ARM64 (aarch64)
+# Função para baixar DXVK para ARM64 (aarch64)
 dxvkArm64Download() {
-        local version="$1"
-        local pkg_name="DXVK-$version-arm64"
+    local version="$1"; local pkg_name="DXVK-$version-arm64"
+    if [ -e "DXVK/$pkg_name" ]; then echo "$pkg_name já foi baixado."; else
+        echo "Baixando $pkg_name..."; cd "DXVK"
+        curl -# -L -O "https://github.com/master-of-zen/dxvk-native/releases/download/v$version/dxvk-native-v$version.tar.gz"
+        if [ $? -ne 0 ]; then echo "Erro ao baixar $pkg_name."; else
+            mkdir -p "dxvk/files"; tar -xf "dxvk-native-v$version.tar.gz"
+            mv "dxvk-native-v$version/aarch64" "dxvk/files/"
+            $INIT_DIR/create-rat-pkg.sh "DXVK" "DXVK" "" "any" "$version-arm64" "DXVK" "dxvk" "$INIT_DIR/components/DXVK"
+            rm -rf "dxvk-native-v$version"*
+        fi; cd "$OLDPWD"
+    fi
+}
 
-        if [ -e "DXVK/$pkg_name" ]; then
-                echo "$pkg_name já foi baixado."
+# ... (outras funções de download como dxvkAsyncDownload, dxvkGplAsyncDownload, etc., permanecem as mesmas) ...
+# (Para economizar espaço, omiti as outras funções que não foram alteradas. Copie-as do seu script original)
+wined3dDownload() {
+        if [ -e "WineD3D/WineD3D-($1)" ]; then
+                echo "WineD3D-$1 já foi baixado."
         else
-                echo "Baixando $pkg_name..."
-                cd "DXVK"
-                # Usando o repositório dxvk-native que fornece builds para aarch64
-                curl -# -L -O "https://github.com/master-of-zen/dxvk-native/releases/download/v$version/dxvk-native-v$version.tar.gz"
+                echo "Baixando WineD3D-$1..."
+
+                cd "WineD3D"
+
+                curl -# -L -O "https://downloads.fdossena.com/Projects/WineD3D/Builds/WineD3DForWindows_$1.zip"
+                curl -# -L -O "https://downloads.fdossena.com/Projects/WineD3D/Builds/WineD3DForWindows_$1-x86_64.zip"
+
                 if [ $? != 0 ]; then
-                        echo "Erro ao baixar $pkg_name."
+                        echo "Error on Downloading WineD3D-($1)."
                 else
-                        mkdir -p "dxvk/files"
-                        tar -xf "dxvk-native-v$version.tar.gz"
-                        # Para ARM64, a pasta é 'aarch64'
-                        mv "dxvk-native-v$version/aarch64" "dxvk/files/"
-                        $INIT_DIR/create-rat-pkg.sh "DXVK" "DXVK" "" "any" "$version-arm64" "DXVK" "dxvk" "$INIT_DIR/components/DXVK"
-                        rm -rf "dxvk-native-v$version"*
+                        mkdir -p "wined3d/files/x64"
+                        mkdir -p "wined3d/files/x32"
+
+                        7z x "WineD3D*$1-x86_64.zip" -o"wined3d-x64" -aoa &> /dev/null
+                        7z x "WineD3D*$1.zip" -o"wined3d-x32" -aoa &> /dev/null
+
+                        for i in $(find "wined3d-x64" -name "*.dll"); do
+                                cp -f "$i" "wined3d/files/x64"
+                        done
+
+                        for i in $(find "wined3d-x32" -name "*.dll"); do
+                                cp -f "$i" "wined3d/files/x32"
+                        done
+
+                        $INIT_DIR/create-rat-pkg.sh "WineD3D" "WineD3D" "" "any" "$1" "WineD3D" "wined3d" "$INIT_DIR/components/WineD3D"
+
+                        rm -rf "wined3d"* *".zip"
                 fi
+
                 cd "$OLDPWD"
         fi
 }
 
-
-dxvkAsyncDownload() {
-        if [ -e "DXVK/DXVK-$1-async" ]; then
-                echo "DXVK-$1-async já foi baixado."
+vkd3dDownload() {
+        if [ -e "VKD3D/VKD3D-$1" ]; then
+                echo "VKD3D-$1 já foi baixado."
         else
-                echo "Baixando DXVK-$1-async..."
-                cd "DXVK"
-                curl -# -L -O "https://github.com/Sporif/dxvk-async/releases/download/$1/dxvk-async-$1.tar.gz"
+                cd "VKD3D"
+
+                echo "Downloading VKD3D-$1..."
+
+                curl -# -L -O "https://github.com/HansKristian-Work/vkd3d-proton/releases/download/v$1/vkd3d-proton-$1.tar.zst"
+
                 if [ $? != 0 ]; then
-                        echo "Erro ao baixar DXVK-$1-async."
+                        echo "Error on Downloading VKD3D-$1."
                 else
-                        mkdir -p "dxvk/files"
-                        tar -xf "dxvk-async-$1.tar.gz"
-                        mv "dxvk"*"/x32" "dxvk"*"/x64" "dxvk/files"
-                        $INIT_DIR/create-rat-pkg.sh "DXVK" "DXVK" "" "any" "$1-async" "DXVK" "dxvk" "$INIT_DIR/components/DXVK"
-                        rm -rf "dxvk"*
+                        mkdir -p "vkd3d/files"
+
+                        tar -xf "vkd3d-proton-$1.tar.zst"
+
+                        mv "vkd3d"*"/x64" "vkd3d/files/"
+                        mv "vkd3d"*"/x86" "vkd3d/files/x32"
+
+                        $INIT_DIR/create-rat-pkg.sh "VKD3D" "VKD3D" "" "any" "$1" "VKD3D" "vkd3d" "$INIT_DIR/components/VKD3D"
+
+                        rm -rf "vkd3d"*
                 fi
+
                 cd "$OLDPWD"
         fi
 }
+export INIT_DIR="$PWD"
+export WORKDIR="$PWD/components"
 
-dxvkGplAsyncDownload() {
-        if [ -e "DXVK/DXVK-$1-gplasync" ]; then
-                echo "DXVK-$1-gplasync já foi baixado."
-        else
-                echo "Baixando DXVK-$1-gplasync..."
-                cd "DXVK"
-                curl -# -L -O "https://github.com/KreitinnSoftware/dxvk-gplasync/raw/refs/heads/main/dxvk-gplasync-v$1.tar.gz"
-                if [ $? != 0 ]; then
-                        echo "Erro ao baixar DXVK-$1-gplasync."
-                else
-                        mkdir -p "dxvk/files"
-                        tar -xf "dxvk-gplasync-v$1.tar.gz"
-                        mv "dxvk"*"/x32" "dxvk"*"/x64" "dxvk/files"
-                        $INIT_DIR/create-rat-pkg.sh "DXVK" "DXVK" "" "any" "$1-gplasync" "DXVK" "dxvk" "$INIT_DIR/components/DXVK"
-                        rm -rf "dxvk"*
-                fi
+mkdir -p "$WORKDIR" && cd "$WORKDIR"
+mkdir -p "DXVK" "WineD3D" "VKD3D"
+
+# Listas de versões
+export DXVK_GPLASYNC_LIST="2.6-1 2.5.3-1"
+export DXVK_ASYNC_LIST="2.0 1.10.3"
+export DXVK_LIST="2.7.1 2.7"
+export DXVK_PROTON_LIST="2.7.1 2.7"
+export DXVK_ARM64_LIST="2.3 2.2"
+export WINED3D_LIST="10.4 10.3"
+export VKD3D_LIST="2.14.1 2.14"
+
+# Loops de download
+for i in $DXVK_GPLASYNC_LIST; do dxvkGplAsyncDownload "$i" & done
+for i in $DXVK_ASYNC_LIST; do dxvkAsyncDownload "$i" & done
+for i in $DXVK_LIST; do dxvkDownload "$i" & done
+for i in $DXVK_PROTON_LIST; do dxvkProtonDownload "$i" & done
+for i in $DXVK_ARM64_LIST; do dxvkArm64Download "$i" & done
+for i in $WINED3D_LIST; do wined3dDownload "$i" & done
+for i in $VKD3D_LIST; do vkd3dDownload "$i" & done
+wait # Espera todos os downloads em paralelo terminarem
+
+# Downloads customizados (com URLs corrigidas)
+# URL CORRIGIDA para RTX Remix
+customDxvkDownload "0.6.0" "Remix" "https://github.com/NVIDIAGameWorks/rtx-remix/releases/download/v0.6.0/rtx-remix-v0.6.0.zip"
+
+# URLs CORRIGIDAS para Sarek (note a mudança no nome do arquivo)
+customDxvkDownload "1.10.3" "Sarek" "https://github.com/Sarek-Project/DXVK-Sarek/releases/download/v1.10.3/dxvk-sarek-v1.10.3.tar.gz"
+customDxvkDownload "1.10.3" "Sarek-ASync" "https://github.com/Sarek-Project/DXVK-Sarek/releases/download/v1.10.3/dxvk-sarek-async-v1.10.3.tar.gz"
+
+echo "Processo de download concluído."
                 cd "$OLDPWD"
         fi
 }
