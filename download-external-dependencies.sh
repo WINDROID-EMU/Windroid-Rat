@@ -35,7 +35,7 @@ dxvkDownload() {
 
 		cd "DXVK"
 
-		curl -# -L -O "https://github.com/doitsujin/dxvk/releases/download/v$1/dxvk-$1.tar.gz"
+		curl -# -L -O "https://github.com/WINDROID-EMU/Windroid-DXVK/releases/download/v$1/dxvk-$1.tar.gz"
 
 		if [ $? != 0 ]; then
 			echo "Error on Downloading DXVK-$1."
